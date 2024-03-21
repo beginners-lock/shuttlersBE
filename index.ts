@@ -118,12 +118,137 @@ app.post('/createaccount', bodyParser.json(), async (req, res) => {
     }
 });
 
-app.post('/signin', bodyParser.json(), async (req, res) => {
+app.post('/login', bodyParser.json(), async (req, res) => {
+    try{
+        let email = req.body.email;
+        let password = req.body.password;
 
+        let action = await prisma.user.findFirst({
+            where: {
+                email: email
+            }
+        });
+
+        if(action){
+            let valid = await bcrypt.compare(password, action.password);
+            if(valid){//
+                let user = {id: action.id, firstname: action.firstname, lastname: action.lastname, email: action.email, matricnumber: action.matricnumber}
+                res.send({err:false, msg:'success', user: user});
+            }else{
+                res.send({err:false, msg:'invalid password',});
+            }
+        }else{
+            res.send({err:false, msg:'no email'});
+        }
+    }catch(e){
+        console.log('Error occured @ /login: '+e);
+        res.send({err:true});
+    }
 });
 
-app.post('/forgotpassword', bodyParser.json(), async (req, res) => {
+app.post('/checkemailexistence', bodyParser.json(), async (req, res) => {
+    try{
+        let email = req.body.email;
 
+        let action = await prisma.user.findFirst({
+            where: {
+                email: email
+            }
+        });
+
+        if(action){//Email exists
+            res.send({err:false, success:true})
+        }else{//No such email exists
+            res.send({err:false, success:false});
+        }
+    }catch(e){
+        console.log('Error occured @ /checkemailexistence: '+e);
+        res.send({err:true});
+    }
+});
+
+app.post('/changepassword', bodyParser.json(), async (req, res) => {
+    try{
+        let email = req.body.email;
+        let password = req.body.password;
+
+        let hashedpass = await bcrypt.hash(password, 10);
+        let user = await prisma.user.findFirst({
+            where: {
+                email: email
+            },
+        });
+
+        if(user){
+            let action = await prisma.user.update({
+                where: {
+                    id: user.id
+                },
+                data: {
+                    password: hashedpass
+                }
+            });
+
+            if(action){
+                let user = {id: action.id, firstname: action.firstname, lastname: action.lastname, email: action.email, matricnumber: action.matricnumber};
+
+                res.send({err: false, user: user});
+            }else{
+                res.send({err: true});
+            }
+        }else{
+            res.send({err:true});
+        }
+    }catch(e){
+        console.log('Error occured @ /changepassword: '+e);
+        res.send({err:true});
+    }
+});
+
+app.post('/checkandchangepassword', bodyParser.json(), async (req, res) => {
+    try{
+        let user = req.body.user;
+        let oldpass = req.body.oldpass;
+        let newpass = req.body.newpass;
+
+        //Check if the old pass is correct
+        let action1 = await prisma.user.findFirst({
+            where: {
+                email: user.email
+            }
+        });
+
+        if(action1){
+            let validpass = await bcrypt.compare(oldpass, action1.password);
+
+            if(validpass){
+                //Change password
+                let hashedpass = await bcrypt.hash(newpass, 10);
+
+                let action2 = await prisma.user.update({
+                    where: {
+                        id: user.id
+                    },
+                    data: {
+                        password: hashedpass
+                    }
+                });
+
+                if(action2){
+                    res.send({err: false, msg: 'success'});
+                }else{
+                    res.send({err: true});
+                }
+            }else{
+                res.send({err:false, msg:'wrong password', stuff:oldpass});
+            }
+        }else{
+            res.send({err: true});
+        }
+    }catch(e){
+        console.log('Error occured @ /checkandchangepassword: '+e);
+        res.send({err:true});
+    }
 });
 
 app.listen(port, () => {
