@@ -251,6 +251,10 @@ app.post('/checkandchangepassword', bodyParser.json(), async (req, res) => {
     }
 });
 
+app.get('ping', (req, res)=>{
+    res.send('Hello, how may I help you?');
+})
+
 app.listen(port, () => {
     console.log(`Express server is listening at http://localhost:${port} 🚀`);
 });
