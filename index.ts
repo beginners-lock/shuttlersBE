@@ -14,7 +14,7 @@ const config = new Configuration({
 });
 
 app.use( cors({ origin: '*' }) );
-const port = 3001;
+const port = process.env.PORT;
 
 app.post('/sendotp', bodyParser.json(), async (req, res) => {
     try{
