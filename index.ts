@@ -82,7 +82,7 @@ app.post('/userdetailsexistencecheck', bodyParser.json(), async (req, res) => {
         if(similardetail){
             res.send({err: false, msg: true});    
         }else{
-            res.send({err: false, msg: false})
+            res.send({err: false, msg: false});
         }
     }catch(e){
         console.log('Error occured @ /userdetailsexistencecheck: '+e);
@@ -90,7 +90,7 @@ app.post('/userdetailsexistencecheck', bodyParser.json(), async (req, res) => {
     }
 });
 
-app.post('/createaccount', bodyParser.json(), async (req, res) => {
+app.post('/createuseraccount', bodyParser.json(), async (req, res) => {
     try{
         let fname = req.body.fname;         let lname = req.body.lname;
         let email = req.body.email;         let matric = req.body.matric.toUpperCase();
@@ -106,7 +106,8 @@ app.post('/createaccount', bodyParser.json(), async (req, res) => {
                 lastname: lname,
                 email: email,
                 matricnumber: matric,
-                password: hashedpass
+                password: hashedpass,
+                type: "user"
             }
         });
 
@@ -250,6 +251,57 @@ app.post('/checkandchangepassword', bodyParser.json(), async (req, res) => {
         res.send({err:true});
     }
 });
+
+app.post('/driverdetailsexistencecheck', bodyParser.json(), async (req, res) => {
+    try{
+        let email = req.body.email;
+
+        let similardriver = await prisma.driver.findFirst({
+            where: {
+                email: email
+            }
+        });
+
+        if(similardriver){
+            res.send({err: false, msg: true});
+        }else{
+            res.send({err: false, msg: false});
+        }
+    }catch(e){
+        console.log('Error occured @ /driverdetailsexistencecheck: '+e);
+        res.send({err:true});
+    }
+});
+
+app.post('/createdriveraccount', async (req, res) => {
+    try{
+        let { fullname, email, password, phone, cartype, carnumber } = req.body;
+
+        let hashedpass = bcrypt.hash(password, 10);
+
+        let action = await prisma.driver.create({
+            data: {
+                fullname: fullname,
+                email: email,
+                phone: phone,
+                password: hashedpass,
+                carnumber: carnumber,
+                cartype: cartype,
+                type: "driver"
+            }
+        });
+        
+        if(action){
+            let data = {fullname: action.fullname, email: action.email, phone: action.phone, cartype: action.cartype, carnumber: action.carnumber};
+            res.send({err:false, driver: data});
+        }else{
+            res.send({err:true});
+        }
+    }catch(e){
+        console.log('Error occured @ /createdriveraccount: '+e);
+        res.send({err:true});
+    }
+})
 
 app.get('ping', (req, res)=>{
     res.send('Hello, how may I help you?');
