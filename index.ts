@@ -119,7 +119,7 @@ app.post('/createuseraccount', bodyParser.json(), async (req, res) => {
     }
 });
 
-app.post('/login', bodyParser.json(), async (req, res) => {
+app.post('/userlogin', bodyParser.json(), async (req, res) => {
     try{
         let email = req.body.email;
         let password = req.body.password;
@@ -142,7 +142,7 @@ app.post('/login', bodyParser.json(), async (req, res) => {
             res.send({err:false, msg:'no email'});
         }
     }catch(e){
-        console.log('Error occured @ /login: '+e);
+        console.log('Error occured @ /userlogin: '+e);
         res.send({err:true});
     }
 });
@@ -273,11 +273,12 @@ app.post('/driverdetailsexistencecheck', bodyParser.json(), async (req, res) => 
     }
 });
 
-app.post('/createdriveraccount', async (req, res) => {
+app.post('/createdriveraccount', bodyParser.json(), async (req, res) => {
     try{
         let { fullname, email, password, phone, cartype, carnumber } = req.body;
+        console.log('>>'+password);
 
-        let hashedpass = bcrypt.hash(password, 10);
+        let hashedpass = await bcrypt.hash(password, 10);
 
         let action = await prisma.driver.create({
             data: {
@@ -292,7 +293,8 @@ app.post('/createdriveraccount', async (req, res) => {
         });
         
         if(action){
-            let data = {fullname: action.fullname, email: action.email, phone: action.phone, cartype: action.cartype, carnumber: action.carnumber};
+            //Carry out function of sending driver details to the admin to verify
+            let data = {id: action.id, fullname: action.fullname, email: action.email, phone: action.phone, cartype: action.cartype, carnumber: action.carnumber};
             res.send({err:false, driver: data});
         }else{
             res.send({err:true});
@@ -303,6 +305,35 @@ app.post('/createdriveraccount', async (req, res) => {
     }
 })
 
+app.post('/driverlogin', bodyParser.json(), async (req, res) => {
+    try{
+        let email = req.body.email;
+        let password = req.body.password;
+
+        let action = await prisma.driver.findFirst({
+            where: {
+                email: email
+            }
+        });
+
+        if(action){
+            let correct = await bcrypt.compare(password, action.password);
+
+            if(correct){
+                let data = {id: action.id, fullname: action.fullname, email: action.email, phone: action.phone, cartype: action.cartype, carnumber: action.carnumber};
+                res.send({err:false, correct:true, driver:data});
+            }else{
+                res.send({err:false, correct:false});
+            }
+        }else{
+            res.send({err:true, message:'No driver exists with this email'});
+        }
+    }catch(e){
+        console.log('Error occured @ /driverlogin: '+e);
+        res.send({err:true});
+    }
+});
+
 app.get('ping', (req, res)=>{
     res.send('Hello, how may I help you?');
 })
@@ -310,3 +341,50 @@ app.get('ping', (req, res)=>{
 app.listen(port, () => {
     console.log(`Express server is listening at http://localhost:${port} 🚀`);
 });
+
+function sendemail(email: string, message: string){
+    try{
+        console.log('>>'+email);
+
+        const emailsApi = new EmailsApi(config);
+
+        const emailTransactionalMessageData: EmailTransactionalMessageData = {
+            Recipients: { 
+                To: [email] // maximum 50 recipients
+            },
+            Content: {
+                Body: [
+                    {
+                        ContentType: "HTML",
+                        Charset: "utf-8",
+                        Content: "<h2><strong>"+(message).toString()+"</strong></h2>"
+                    }/*,
+                    {
+                        ContentType: "PlainText",
+                        Charset: "utf-8",
+                        Content: (randomnum).toString()
+                    }*/
+                ],
+                From: "shuttlers.mail@gmail.com",
+                Subject: "Shuttlers Email Verification [OTP]"
+            }
+        };
+
+        const sendTransactionalEmails = (emailTransactionalMessageData: EmailTransactionalMessageData): void => {
+            emailsApi.emailsTransactionalPost(emailTransactionalMessageData).then((response) => {
+                //console.log('API called successfully.');
+                //console.log(response.data);
+                return 'success';
+            }).catch((error) => {
+                console.error('Error occured in sendemail() @emailsTransactionalPost: '+error);
+                return 'failed';
+            });
+        };
+
+        sendTransactionalEmails(emailTransactionalMessageData);
+        
+    }catch(e){
+        console.log('Error occured in sendemail(): '+e);
+        return 'failed';
+    }
+}
