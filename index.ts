@@ -399,9 +399,13 @@ app.post('/adminlogin', bodyParser.json(), (req, res) => {
     }
 });
 
+app.get('/', (req, res)=>{
+    res.send('You just reached the root dir');
+});
+
 app.get('/ping', (req, res)=>{
     res.send('Hello, how may I help you?');
-})
+});
 
 app.listen(port, () => {
     console.log(`Express server is listening at http://localhost:${port} 🚀`);
