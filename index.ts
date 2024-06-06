@@ -111,7 +111,7 @@ app.post('/createuseraccount', bodyParser.json(), async (req, res) => {
             }
         });
 
-        let user = {id: action.id, firstname: action.firstname, lastname: action.lastname, email: action.email, matricnumber: action.matricnumber}
+        let user = {id: action.id, firstname: action.firstname, lastname: action.lastname, email: action.email, matricnumber: action.matricnumber, type:action.type}
         res.send({err:false, user: user});
     }catch(e){
         console.log('Error occured @ /createaccount: '+e);
@@ -133,7 +133,7 @@ app.post('/userlogin', bodyParser.json(), async (req, res) => {
         if(action){
             let valid = await bcrypt.compare(password, action.password);
             if(valid){//
-                let user = {id: action.id, firstname: action.firstname, lastname: action.lastname, email: action.email, matricnumber: action.matricnumber}
+                let user = {id: action.id, firstname: action.firstname, lastname: action.lastname, email: action.email, matricnumber: action.matricnumber, type:action.type}
                 res.send({err:false, msg:'success', user: user});
             }else{
                 res.send({err:false, msg:'invalid password',});
@@ -147,7 +147,7 @@ app.post('/userlogin', bodyParser.json(), async (req, res) => {
     }
 });
 
-app.post('/checkemailexistence', bodyParser.json(), async (req, res) => {
+app.post('/checkuseremailexistence', bodyParser.json(), async (req, res) => {
     try{
         let email = req.body.email;
 
@@ -163,12 +163,33 @@ app.post('/checkemailexistence', bodyParser.json(), async (req, res) => {
             res.send({err:false, success:false});
         }
     }catch(e){
-        console.log('Error occured @ /checkemailexistence: '+e);
+        console.log('Error occured @ /checkuseremailexistence: '+e);
         res.send({err:true});
     }
 });
 
-app.post('/changepassword', bodyParser.json(), async (req, res) => {
+app.post('/checkdriveremailexistence', bodyParser.json(), async (req, res) => {
+    try{
+        let email = req.body.email;
+
+        let action = await prisma.driver.findFirst({
+            where: {
+                email: email
+            }
+        });
+
+        if(action){//Email exists
+            res.send({err:false, success:true})
+        }else{//No such email exists
+            res.send({err:false, success:false});
+        }
+    }catch(e){
+        console.log('Error occured @ /checkdriveremailexistence: '+e);
+        res.send({err:true});
+    }
+});
+
+app.post('/changeuserpassword', bodyParser.json(), async (req, res) => {
     try{
         let email = req.body.email;
         let password = req.body.password;
@@ -201,12 +222,12 @@ app.post('/changepassword', bodyParser.json(), async (req, res) => {
             res.send({err:true});
         }
     }catch(e){
-        console.log('Error occured @ /changepassword: '+e);
+        console.log('Error occured @ /changeuserpassword: '+e);
         res.send({err:true});
     }
 });
 
-app.post('/checkandchangepassword', bodyParser.json(), async (req, res) => {
+app.post('/checkandchangeuserpassword', bodyParser.json(), async (req, res) => {
     try{
         let user = req.body.user;
         let oldpass = req.body.oldpass;
@@ -247,7 +268,7 @@ app.post('/checkandchangepassword', bodyParser.json(), async (req, res) => {
             res.send({err: true});
         }
     }catch(e){
-        console.log('Error occured @ /checkandchangepassword: '+e);
+        console.log('Error occured @ /checkandchangeuserpassword: '+e);
         res.send({err:true});
     }
 });
@@ -294,7 +315,7 @@ app.post('/createdriveraccount', bodyParser.json(), async (req, res) => {
         
         if(action){
             //Carry out function of sending driver details to the admin to verify
-            let data = {id: action.id, fullname: action.fullname, email: action.email, phone: action.phone, cartype: action.cartype, carnumber: action.carnumber};
+            let data = {id: action.id, fullname: action.fullname, email: action.email, phone: action.phone, cartype: action.cartype, carnumber: action.carnumber, type:action.type};
             res.send({err:false, driver: data});
         }else{
             res.send({err:true});
@@ -320,7 +341,7 @@ app.post('/driverlogin', bodyParser.json(), async (req, res) => {
             let correct = await bcrypt.compare(password, action.password);
 
             if(correct){
-                let data = {id: action.id, fullname: action.fullname, email: action.email, phone: action.phone, cartype: action.cartype, carnumber: action.carnumber};
+                let data = {id: action.id, fullname: action.fullname, email: action.email, phone: action.phone, cartype: action.cartype, carnumber: action.carnumber, type:action.type};
                 res.send({err:false, correct:true, driver:data});
             }else{
                 res.send({err:false, correct:false});
@@ -334,7 +355,51 @@ app.post('/driverlogin', bodyParser.json(), async (req, res) => {
     }
 });
 
-app.get('ping', (req, res)=>{
+app.post('/changedriverpassword', bodyParser.json(), async (req, res) => {
+    try{
+        let email = req.body.email;
+        let password = req.body.password;
+
+        let hashedpass = await bcrypt.hash(password, 10);
+
+        let action = await prisma.driver.update({
+            where: {
+                email: email
+            },
+            data: {
+                password: hashedpass
+            }
+        });
+        
+        if(action){
+            let data = {id: action.id, fullname: action.fullname, email: action.email, phone: action.phone, cartype: action.cartype, carnumber: action.carnumber};
+            res.send({err:false, driver:data})
+        }else{
+            res.send({err:true});
+        }
+    }catch(e){
+        console.log('Error occured @ /changedriverpassword: '+e);
+        res.send({err:true});
+    }
+});
+
+app.post('/adminlogin', bodyParser.json(), (req, res) => {
+    try{
+        let email = req.body.email;
+        let pass = req.body.pass;
+
+        if(email===process.env.ADMIN_EMAIL && pass===process.env.ADMIN_PASS){
+            res.send({err: false, user: {type:'admin', id:process.env.ADMIN_ID} });
+        }else{
+            res.send({err: false, msg: 'Invalid credentials'});
+        }
+    }catch(e){
+        console.log('Error ococured @ /adminlogin: '+e);
+        res.send({err: true});
+    }
+});
+
+app.get('/ping', (req, res)=>{
     res.send('Hello, how may I help you?');
 })
 
