@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { Configuration, EmailsApi, EmailTransactionalMessageData } from '@elasticemail/elasticemail-client-ts-axios';
 
@@ -17,6 +17,7 @@ app.use( cors({ origin: '*' }) );
 const port = process.env.PORT;
 
 app.post('/sendotp', bodyParser.json(), async (req, res) => {
+    console.log('send');
     try{
         let email: string = req.body.email;
         console.log('>>'+email);
@@ -393,6 +394,19 @@ app.post('/adminlogin', bodyParser.json(), (req, res) => {
         }else{
             res.send({err: false, msg: 'Invalid credentials'});
         }
+    }catch(e){
+        console.log('Error ococured @ /adminlogin: '+e);
+        res.send({err: true});
+    }
+});
+
+app.post('/getemissiondata', bodyParser.json(), async (req, res) => {
+    try{
+        fetch('http://167.99.0.104:5000/get_data').then(response => {
+            return response.json();
+        }).then(response => {
+            res.send({err:false, data:response});
+        });
     }catch(e){
         console.log('Error ococured @ /adminlogin: '+e);
         res.send({err: true});

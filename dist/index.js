@@ -26,6 +26,7 @@ const config = new elasticemail_client_ts_axios_1.Configuration({
 app.use(cors({ origin: '*' }));
 const port = process.env.PORT;
 app.post('/sendotp', bodyParser.json(), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('send');
     try {
         let email = req.body.email;
         console.log('>>' + email);
@@ -389,6 +390,19 @@ app.post('/adminlogin', bodyParser.json(), (req, res) => {
         res.send({ err: true });
     }
 });
+app.post('/getemissiondata', bodyParser.json(), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        fetch('http://167.99.0.104:5000/get_data').then(response => {
+            return response.json();
+        }).then(response => {
+            res.send({ err: false, data: response });
+        });
+    }
+    catch (e) {
+        console.log('Error ococured @ /adminlogin: ' + e);
+        res.send({ err: true });
+    }
+}));
 app.get('/', (req, res) => {
     res.send('You just reached the root dir');
 });
