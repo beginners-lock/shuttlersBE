@@ -159,7 +159,7 @@ app.post('/checkuseremailexistence', bodyParser.json(), (req, res) => __awaiter(
             }
         });
         if (action) { //Email exists
-            res.send({ err: false, success: true });
+            res.send({ err: false, success: true, firstname: action.firstname });
         }
         else { //No such email exists
             res.send({ err: false, success: false });
